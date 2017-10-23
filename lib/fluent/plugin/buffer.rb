@@ -351,11 +351,15 @@ module Fluent
       def enqueue_all
         log.trace "enqueueing all chunks in buffer", instance: self.object_id
         if block_given?
-          synchronize{ @stage.keys }.each do |metadata|
-            chunk = @stage[metadata]
-            next unless chunk
-            v = yield metadata, chunk
-            enqueue_chunk(metadata) if v
+          metadata_array = []
+          synchronize do
+            @stage.each do |metadata, chunk|
+              v = yield metadata, chunk
+              metadata_array << metadata if v
+            end
+          end
+          metadata_array.each do |metadata|
+            enqueue_chunk(metadata)
           end
         else
           synchronize{ @stage.keys }.each do |metadata|
